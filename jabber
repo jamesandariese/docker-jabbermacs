@@ -1,0 +1,33 @@
+#!/bin/sh
+
+if [ x = x"$1" ];then
+  echo "try /jabber <user>@<domainpart>[/resource] [jabber-server]"
+  exit 1
+fi
+
+REST="${1#*@}"
+HOST="${REST%%/*}"
+if [ x"$2" != x ];then
+    HOST="$2"
+fi
+
+if [ x"${REST%/*}" = x"$1" ];then
+    EXTRA="/jabbermacs"
+fi
+
+cat >> /jabberconfig.el <<EOF
+ 
+(custom-set-variables
+ '(jabber-account-list (quote (("$1$EXTRA" (:network-server . "$HOST") (:connection-type . starttls))))))
+(custom-set-faces
+ )
+
+;; the asking about anonymous auth is annoying.
+(defadvice yes-or-no-p (around yes-or-no-p-never-ask-about-anonymous-auth)
+  (if (equal (ad-get-args 0) '("Use anonymous authentication? ")) nil
+    ad-do-it))
+(ad-activate 'yes-or-no-p)
+EOF
+
+emacs -nw -l /jabberconfig.el -f jabber-connect-all -f jabber-display-roster -f delete-other-windows --eval "(progn (jabber-switch-to-roster-buffer) (delete-other-windows))"
+
